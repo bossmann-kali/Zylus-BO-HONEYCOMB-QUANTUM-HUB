@@ -1,0 +1,64 @@
+// This file defines the Prisma schema for the FinNexus database.
+
+// Setting the datasource and generator
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Set your database URL
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Model definitions
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  portfolios  Portfolio[]
+  transactions Transaction[]
+  identityNFT IdentityNFT[]
+  spendLogs   SpendLog[]
+  loans       Loan[]
+}
+
+model Portfolio {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  assets    String
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model SpendLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount     Float
+  date       DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Loan {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount     Float
+  interest   Float
+  date       DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount     Float
+  date       DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model IdentityNFT {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenId   String   @unique
+  metadata   String
+  user      User     @relation(fields: [userId], references: [id])
+}
