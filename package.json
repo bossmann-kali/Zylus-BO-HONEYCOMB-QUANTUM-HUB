@@ -1,0 +1,20 @@
+{  
+  "name": "finnexus-bridge-system",  
+  "private": true,  
+  "scripts": {  
+    "dev": "next dev",  
+    "build": "next build",  
+    "start": "next start"  
+  },  
+  "dependencies": {  
+    "next": "^15.0.0",  
+    "react": "^17.0.0",  
+    "react-dom": "^17.0.0",  
+    "prisma": "^3.0.0",  
+    "wagmi": "^0.5.0",  
+    "hardhat": "^2.0.0",  
+    "fastapi": "^0.68.0",  
+    "redis": "^4.0.0",  
+    "pg": "^8.0.0"  
+  }  
+}
