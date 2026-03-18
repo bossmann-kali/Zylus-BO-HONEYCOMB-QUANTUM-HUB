@@ -1,64 +1,178 @@
-// This file defines the Prisma schema for the FinNexus database.
-
-// Setting the datasource and generator
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL") // Set your database URL
-}
+// FinNexus v1.0.4 - Production-Ready Financial Identity Schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// Model definitions
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model User {
-  id         Int       @id @default(autoincrement())
-  email      String    @unique
-  password   String
-  portfolios  Portfolio[]
-  transactions Transaction[]
-  identityNFT IdentityNFT[]
-  spendLogs   SpendLog[]
-  loans       Loan[]
+  id               String            @id @default(cuid())
+  email            String            @unique
+  password         String
+  name             String?
+  walletAddress    String?           @unique
+  biometricHash    String?           @unique
+  ncWalletDID      String?           @unique
+  kycStatus        String            @default("PENDING")
+  riskScore        Int               @default(50)
+  creditScore      CreditScore?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  cryptoAddresses  CryptoAddress[]
+  bankingAccounts  BankingAccount[]
+  portfolios       Portfolio[]
+  spendLogs        SpendLog[]
+  loans            Loan[]
+  transactions     Transaction[]
+  identityNFT      IdentityNFT?
+  collaterals      Collateral[]
+}
+
+model CryptoAddress {
+  id               String            @id @default(cuid())
+  address          String            @unique
+  chain            String
+  isVerified       Boolean           @default(false)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model BankingAccount {
+  id               String            @id @default(cuid())
+  plaidAccountId   String?           @unique
+  accountNumber    String?
+  routingNumber    String?
+  bankName         String
+  accountType      String
+  provider         String
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Portfolio {
-  id       Int      @id @default(autoincrement())
-  userId   Int
-  assets    String
-  user     User     @relation(fields: [userId], references: [id])
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalValue       Float             @default(0)
+  availableCredit  Float             @default(0)
+  lockedValue      Float             @default(0)
+  version          Int               @default(1)
+  assets           Asset[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
-model SpendLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  amount     Float
-  date       DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+model Asset {
+  id               String            @id @default(cuid())
+  portfolioId      String
+  portfolio        Portfolio         @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  tokenAddress     String
+  tokenSymbol      String
+  balance          Float
+  usdValue         Float
+  chain            String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model CreditScore {
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score            Int               @default(500)
+  range            String            @default("FAIR")
+  factors          String[]          @default([])
+  confidence       Float             @default(0.0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Loan {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  amount     Float
-  interest   Float
-  date       DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount           Float
+  interestRate     Float
+  loanStatus       String            @default("ACTIVE")
+  ltv              Float
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  repaymentSchedule RepaymentSchedule[]
+  collaterals      Collateral[]
+}
+
+model RepaymentSchedule {
+  id               String            @id @default(cuid())
+  loanId           String
+  loan             Loan              @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  dueDate          DateTime
+  amountDue        Float
+  amountPaid       Float            @default(0)
+  isPaid           Boolean          @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Collateral {
+  id               String            @id @default(cuid())
+  loanId           String?
+  loan             Loan?             @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenAddress     String
+  chain            String
+  amount           Float
+  usdValue         Float
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Transaction {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  amount     Float
-  date       DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  txHash           String?
+  fromAddress      String
+  toAddress        String
+  amount           Float
+  feeAmount        Float            @default(0)
+  transactionType  String
+  status           String            @default("PENDING")
+  chain            String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model SpendLog {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount           Float
+  spendType        String
+  description      String?
+  approvalStatus   String            @default("APPROVED")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model IdentityNFT {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  tokenId   String   @unique
-  metadata   String
-  user      User     @relation(fields: [userId], references: [id])
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenId          String            @unique
+  contractAddress  String
+  chain            String
+  metadata         String
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
